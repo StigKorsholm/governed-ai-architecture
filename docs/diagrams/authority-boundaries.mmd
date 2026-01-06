@@ -1,0 +1,64 @@
+flowchart LR
+
+%% =========================
+%% Actors
+%% =========================
+SME["Human Reviewers<br/>(SME / Architect / Risk)"]:::actor
+
+%% =========================
+%% Orchestration
+%% =========================
+N8N["Orchestrator<br/>n8n workflows<br/><i>control flow only</i>"]:::control
+
+%% =========================
+%% Deterministic gates
+%% =========================
+VAL["Deterministic Validators<br/>Schema + Invariants + Domain Rules<br/><b>FAIL / STOP / WARN</b>"]:::gate
+CP["Human Checkpoints (CP-1..CP-4)<br/>Maker–Checker at CP-3<br/><i>explicit approvals</i>"]:::gate
+
+%% =========================
+%% Authority-bound data stores
+%% =========================
+GRAPH["Neo4j Knowledge Graph<br/><b>System of Record</b><br/>tables • capabilities • mappings<br/>bounded contexts • waves • risks"]:::truth
+PG["PostgreSQL<br/><b>Audit & Governance Store</b><br/>run manifests • approvals • overrides<br/>errors • translations • prompt issues"]:::audit
+OBJ["Artifact Store (FS / Object Storage)<br/><b>Immutable run artifacts</b><br/>reports • diagrams • OpenAPI<br/>SQL scripts • reconciliation packs"]:::artifact
+
+%% =========================
+%% LLM (proposal generator)
+%% =========================
+LLM["LLM (local/on-prem default)<br/><b>Generates proposals</b><br/><i>never authoritative</i>"]:::llm
+
+%% =========================
+%% Flows
+%% =========================
+N8N -->|invoke| LLM
+LLM -->|proposals| VAL
+VAL -->|validated updates| GRAPH
+VAL -->|evidence & outputs| OBJ
+VAL -->|audit signals| PG
+VAL -->|STOP| CP
+CP -->|approve / override / reject| PG
+CP -->|resume| N8N
+GRAPH -->|deterministic queries| OBJ
+OBJ -->|review| SME
+
+%% =========================
+%% Styling
+%% =========================
+classDef actor fill:#ffffff,stroke:#6e7781,stroke-width:1px;
+classDef control fill:#eef6ff,stroke:#0969da,stroke-width:1px;
+classDef gate fill:#fff8c5,stroke:#9a6700,stroke-width:1px;
+classDef truth fill:#f6ffed,stroke:#1a7f37,stroke-width:1px;
+classDef audit fill:#fff0f6,stroke:#bf3989,stroke-width:1px;
+classDef artifact fill:#f5f0ff,stroke:#8250df,stroke-width:1px;
+classDef llm fill:#f6f8fa,stroke:#24292f,stroke-width:1px;
+
+class SME actor;
+class N8N control;
+class VAL,CP gate;
+class GRAPH truth;
+class PG audit;
+class OBJ artifact;
+class LLM llm;
+
+linkStyle default stroke-width:1px,opacity:0.65;
